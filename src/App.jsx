@@ -53,7 +53,7 @@ const Home = () => {
       });
 
       // Use redirect-style download
-      window.location.href = `${BASE_URL.replace("/api", "")}${res.data.downloadUrl}`;
+      window.location.href = `${BASE_URL}${res.data.downloadUrl}`;
 
       setStatus("🎉 Download started. Lelo Bhai!");
       setToast(null);

@@ -1,1 +1,5 @@
 @import "tailwindcss";  
+
+input[type="range"]::-webkit-slider-thumb {
+  background-color: #3b82f6;
+}

@@ -1,14 +1,22 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
+import TrimPreviewModal from "./components/TrimPreviewModal";
 
 const Home = () => {
   const [url, setUrl] = useState("");
   const [formats, setFormats] = useState([]);
   const [meta, setMeta] = useState(null);
+  const [selectedFormat, setSelectedFormat] = useState(null);
   const [playlist, setPlaylist] = useState([]);
   const [status, setStatus] = useState("");
   const [toast, setToast] = useState(null);
+  const [trimStart, setTrimStart] = useState(0);
+  const [trimEnd, setTrimEnd] = useState(0);
+  const [loopPreview, setLoopPreview] = useState(false);
+  const [showTrimModal, setShowTrimModal] = useState(false);
+
+  const videoRef = useRef(null);
 
   const BASE_URL = import.meta.env.VITE_BASE_URL;
 
@@ -22,6 +30,7 @@ const Home = () => {
     setMeta(null);
     setFormats([]);
     setPlaylist([]);
+    setSelectedFormat(null);
     try {
       const res = await axios.post(`${BASE_URL}/download/formats`, { url });
       if (res.data.type === "single") {
@@ -41,25 +50,29 @@ const Home = () => {
     }
   };
 
-  const handleDownload = async (videoUrl, quality, title) => {
-    setStatus("📥 Downloading... Sit tight!");
-    showToast("📥 Your download is starting. Check your browser’s downloads!");
-
+  const handleDownloadTrimmed = async () => {
+    if (trimStart >= trimEnd) {
+      setStatus("❌ Start time must be less than end time.");
+      showToast("⚠️ Invalid trim range!");
+      return;
+    }
+    setStatus("✂️ Trimming and downloading...");
+    showToast("✂️ Bhai kam Start ho gya hai Thand Rakh Khudi download ho ga");
     try {
       const res = await axios.post(`${BASE_URL}/download/generate`, {
-        url: videoUrl,
-        quality,
-        title,
+        url,
+        quality: selectedFormat.format_id,
+        title: meta.title,
+        startTime: secondsToHHMMSS(trimStart),
+        endTime: secondsToHHMMSS(trimEnd),
       });
 
-      // Use redirect-style download
       window.location.href = `${BASE_URL}${res.data.downloadUrl}`;
-
-      setStatus("🎉 Download started. Lelo Bhai!");
+      setStatus("🎉 Trimmed download started!");
       setToast(null);
     } catch (err) {
       console.error(err);
-      setStatus("❌ Download failed. Sad reacts only.");
+      setStatus("❌ Trim + download failed. Sad reacts.");
       setToast(null);
     }
   };
@@ -73,6 +86,35 @@ const Home = () => {
 
   const readableSize = (b) =>
     b ? `${(b / 1024 / 1024).toFixed(2)} MB` : "Unknown size";
+
+  const secondsToHHMMSS = (sec) => {
+    const h = String(Math.floor(sec / 3600)).padStart(2, "0");
+    const m = String(Math.floor((sec % 3600) / 60)).padStart(2, "0");
+    const s = String(Math.floor(sec % 60)).padStart(2, "0");
+    return `${h}:${m}:${s}`;
+  };
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const handleLoop = () => {
+      if (video.currentTime >= trimEnd) {
+        video.currentTime = trimStart;
+        video.play();
+      }
+    };
+
+    if (loopPreview) {
+      video.currentTime = trimStart;
+      video.play();
+      video.addEventListener("timeupdate", handleLoop);
+    }
+
+    return () => {
+      video.removeEventListener("timeupdate", handleLoop);
+    };
+  }, [loopPreview, trimStart, trimEnd]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-900 via-gray-800 to-black text-white flex flex-col">
@@ -148,7 +190,7 @@ const Home = () => {
           </motion.div>
         )}
 
-        {formats.length > 0 && (
+        {formats.length > 0 && !selectedFormat && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -176,15 +218,81 @@ const Home = () => {
                 <motion.button
                   className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded"
                   whileTap={{ scale: 0.95 }}
-                  onClick={() =>
-                    handleDownload(url, f.format_id, meta.title)
-                  }
+                  onClick={() => setSelectedFormat(f)}
                 >
-                  Lelo Bhai 📦
+                  ✂️ Katna Hai Ya 📥 Lena Hai
                 </motion.button>
               </motion.div>
             ))}
           </motion.div>
+        )}
+
+        {selectedFormat && (
+          <div className="mt-6 bg-gray-800 p-4 rounded shadow">
+            <video
+              src={selectedFormat.url}
+              controls
+              ref={videoRef}
+              className="w-full rounded"
+              onLoadedMetadata={() => {
+                const duration = videoRef.current?.duration;
+                setTrimEnd(duration);
+              }}
+            ></video>
+
+            <div className="my-4 space-y-4">
+              <div>
+                <label className="block text-sm mb-1 text-white">
+                  Start Time: {formatDuration(trimStart)}
+                </label>
+                <input
+                  type="range"
+                  min={0}
+                  max={videoRef.current?.duration || 100}
+                  value={trimStart}
+                  onChange={(e) => {
+                    const val = Number(e.target.value);
+                    setTrimStart(val);
+                    if (videoRef.current) videoRef.current.currentTime = val;
+                  }}
+                  className="w-full"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm mb-1 text-white">
+                  End Time: {formatDuration(trimEnd)}
+                </label>
+                <input
+                  type="range"
+                  min={0}
+                  max={videoRef.current?.duration || 100}
+                  value={trimEnd}
+                  onChange={(e) => {
+                    const val = Number(e.target.value);
+                    setTrimEnd(val);
+                    if (videoRef.current) videoRef.current.currentTime = val;
+                  }}
+                  className="w-full"
+                />
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowTrimModal(true)}
+                className="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded"
+              >
+                👀 Preview Trimmed Video
+              </button>
+
+              <button
+                onClick={handleDownloadTrimmed}
+                className="mt-4 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
+              >
+                Lelo Bhai 📥📦
+              </button>
+            </div>
+          </div>
         )}
 
         {playlist.length > 0 && (
@@ -201,26 +309,6 @@ const Home = () => {
             >
               Download Full Playlist 🔽
             </motion.button>
-            {playlist.map((video, idx) => (
-              <motion.div
-                key={idx}
-                className="border p-3 rounded shadow flex items-center space-x-4 bg-gray-700"
-                whileHover={{ scale: 1.01 }}
-              >
-                <div className="flex-1">
-                  <h3 className="text-sm font-semibold">{video.title}</h3>
-                </div>
-                <motion.button
-                  onClick={() =>
-                    handleDownload(video.url, "best", video.title)
-                  }
-                  className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded"
-                  whileTap={{ scale: 0.95 }}
-                >
-                  Download 🎬
-                </motion.button>
-              </motion.div>
-            ))}
           </motion.div>
         )}
       </main>
@@ -239,9 +327,17 @@ const Home = () => {
           </motion.div>
         )}
       </AnimatePresence>
+      <TrimPreviewModal
+        isOpen={showTrimModal}
+        onClose={() => setShowTrimModal(false)}
+        videoUrl={selectedFormat?.url}
+        trimStart={trimStart}
+        trimEnd={trimEnd}
+        loopPreview={loopPreview}
+      />
 
       <footer className="bg-black text-center py-4 text-sm text-gray-500">
-        Made with 🤪 by Ap sab Ka Developer &nbsp;|&nbsp; All rights reserved for chaos.
+        Made by Ap sab Ka Developer &nbsp;|&nbsp; All rights reserved for chaos.
       </footer>
     </div>
   );

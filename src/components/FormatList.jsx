@@ -21,7 +21,7 @@ const FormatList = ({ formats, setSelectedFormat, readableSize }) => (
           whileTap={{ scale: 0.95 }}
           onClick={() => setSelectedFormat(f)}
         >
-          ✂️ Katna Hai Ya 📥 Lena Hai
+          ✂️ Trim 📥 Download
         </motion.button>
       </motion.div>
     ))}

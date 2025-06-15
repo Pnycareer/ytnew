@@ -9,7 +9,7 @@ const URLInput = ({ url, setUrl, onFetch, status }) => (
   >
     <motion.input
       type="text"
-      placeholder="Paste YouTube Url"
+      placeholder="Paste YouTube , Facebook , Instagram, Ticktock Url"
       value={url}
       onChange={(e) => setUrl(e.target.value)}
       className="w-full p-3 rounded bg-gray-800 text-white placeholder-gray-500 border border-gray-600"

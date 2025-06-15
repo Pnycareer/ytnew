@@ -124,9 +124,10 @@ const Home = () => {
       </header>
 
       <main className="flex-1 container mx-auto px-4 py-8 max-w-3xl">
+        <Info/>
         <URLInput url={url} setUrl={setUrl} onFetch={fetchFormats} status={status} />
 
-        <Info/>
+        
 
         <AnimatePresence>
           {status && <p className="text-center mt-4 text-yellow-400">{status}</p>}

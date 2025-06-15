@@ -116,10 +116,13 @@ const Home = () => {
     };
   }, [loopPreview, trimStart, trimEnd]);
 
+
+    console.log(selectedFormat , 'sleected')
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-900 via-gray-800 to-black text-white flex flex-col">
       <header className="bg-black py-6 text-center shadow-md">
-        <h1 className="text-3xl font-bold text-blue-400">📼 Video Genie</h1>
+        <h1 className="text-3xl font-bold text-blue-400">📼 Video Genie Rahil</h1>
         <p className="text-sm text-gray-400 mt-1">
           "Khul Ja Sim Sim" for any video
         </p>
